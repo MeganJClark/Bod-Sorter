@@ -1,0 +1,506 @@
+ignoreitem reset
+gosub setVariables
+gosub startMenu ;TODO
+gosub menumanager ;TODO
+
+
+MainLoop:
+finditem %bodBookType C_ , #BACKPACKID
+event property #FINDID
+if %sortbook notin #PROPERTY
+{
+  display Please put the book named %sortBook in your backpack and press play
+  pause
+}
+gosub getRewardBook
+goto MainLoop:
+
+
+
+;=====================================
+sub TinkerMC10Filter
+  ;Small 20 normal bronze
+  gosub findBodBook %C10
+  set %rewardBook #RESULT
+  gosub findBodBook %TinkerUnsortedBook
+  set %sortingBook #RESULT
+  gosub setBookFilter Small Normal Tinker_Bronze 20
+  8. gosub dropBodFromBook
+  9. gosub putBodInBook
+;=====================================
+sub getRewardBook
+namespace local getBook
+  ;parameters
+  ;%1 bookID
+  ;returns book ID
+  ;===================================
+  namespace pop
+  if !lastCount <> N/A && !lastCount < %bookCount
+    set !count !lastCount + 1
+  else
+  {
+   if !lastCount = %bookCount
+   display Done!
+  }
+  else
+    set !count 1
+  if %bookType = 1
+  if %bookType = 2
+  if %bookType = 3
+  {
+     for !i !count %bookCount
+     {
+      BOOK_SEARCH:
+        finditem %bodBookType C
+        event property #FINDID
+        if %tinkerBook . !i notin #PROPERTY
+        {
+          ignoreitem #FINDID
+          goto BOOK_SEARCH
+        }
+        else
+        {
+           ignoreitem reset
+           if #FINDBAGID <> #BACKPACKID
+           {
+             exevent drag #FINDID
+             wait %longwait
+             exevent dropc #BACKPACKID
+             set !lastCount !i
+             wait %longwait
+             namespace push
+             return #FINDID
+           }
+           set !lastCount !i
+           wait %longwait
+           namespace push
+           return #FINDID
+        }
+     }
+     display OK Found all the books!
+     halt
+  }
+  if %bookType = 4
+  if %bookType = 5
+  if %bookType = 6
+  if %bookType = 7
+  if %bookType = 8
+
+;=====================================
+sub clickOffset
+  ;parameters
+  ;%1 x coordinate
+  ;%2 y coordinate
+  ;===================================
+  set %clickx #CONTPOSX + %1
+  set %clicky #CONTPOSY + %2
+  click %clickx %clicky f
+return
+;=====================================
+sub putBodInBook
+  ;parameters
+  ;%1 the bod book id to put bod in
+  ;===================================
+  finditem %bodType C_ , #BACKPACKID
+  for %i 1 #FINDCNT
+  {
+    finditem %bodType C_ , #BACKPACKID
+    exevent drag #FINDID
+    wait %shortwait
+    exevent dropc %1
+    wait %shortwait
+    gosub clickOffset 385 425 ;click exit
+  }
+return
+;=====================================
+sub dropBodFromBook
+  ;===================================
+  if %emptyBook
+    goto EMPTY_BOOK
+  ;find out how many items are in the backpack
+  ;so we can see the item # increase if bod is dropped
+  finditem * C_ , #BACKPACKID
+  set %itemCount #FINDCNT
+  finditem %filledBodBook C_ , #BACKPACKID
+  set #LOBJECTID #FINDID
+  event macro 17 0
+  gosub waitForGump %bodBookSize %bodBookGumpName FilledBook
+  if #RESULT = #FALSE
+  {
+    if #CONTSIZE <> %bodBookSize && The_book_is_empty. in #SYSMSG
+    {
+EMPTY_BOOK:
+      display ok No more bods to turn in$
+      +I hope you found this script helpful$
+      +Thank you for rating it$
+      halt
+    }
+  }
+DROP_BOD:
+  ;if the book opened, drop a bod
+  set %lastCount #FINDCNT
+  gosub clickOffset 40 100 ; drop the 1st bod
+  finditem * C_ , #BACKPACKID ; count items again
+  if %lastCount = #FINDCNT ; if the bod did not drop into the backpack
+  {
+    if There_is_not_enough_room in #SYSMSG
+      ;gosub emptyLootToPacky
+    ;goto DROP_BOD
+    display OK There is no more room in your backpack.$
+    +Please unload some items and start again.
+    halt
+  }
+  wait %longwait
+  if #CONTSIZE <> %bodBookSize && The_book_is_empty. in #SYSMSG
+    set %emptyBook #TRUE
+  gosub clickOffset 385 425 ;close the bod book
+  wait %shortwait
+  return
+;=====================================
+sub setBookFilter
+  ;%1 Bod Book ID
+  ;%2 Bod Size
+  ;%3 Bod Quality
+  ;%4 Bod Type_Material
+  ;%5 Amount
+  ;===================================
+  set %bookID %1
+  set %size %2
+  set %quality %3
+  set %bodType %4
+  set %amount %5
+  set #LOBJECTID %bookID
+  event macro 17 0
+  ;TODO WAIT FOR GUMP
+  wait 20
+  ;~~~~~~~~~~~~~~~~~~~~~~~
+  ;go to filter page
+  gosub clickOffset 48 44
+  ;TODO WAIT FOR GUMP
+  wait 20
+  ;~~~~~~~~~~~~~~~~~~~~~~~
+  ;bod size click offset
+  set %y 105
+  if small in %size
+    set %x 110
+  else
+    set %x 210
+  gosub clickOffset %sizex %sizey
+  ;~~~~~~~~~~~~~~~~~~~~~~~
+  ;bod quality click offset
+  set %y 105
+  if normal in %quality
+    set %x 410
+  else
+    set %x 505
+  gosub clickOffset %x %y
+  ;~~~~~~~~~~~~~~~~~~~~~~~
+  ;set type_material
+  gosub setBodType %bodType
+  set %coords #RESULT
+  gosub divideString %coords left
+  set %x #RESULT
+  gosub divideString %coords right
+  set %y #RESULT
+  display %x %y
+  gosub clickOffset %x %y
+  ;~~~~~~~~~~~~~~~~~~~~~~~
+  ;set amount
+  set %y 650
+  if %amount = 10
+    set %x 115
+  if %amount = 15
+    set %x 215
+  if %amount = 20
+    set %x 315
+  gosub clickOffset %x %y
+  ;~~~~~~~~~~~~~~~~~~~~~~~
+  ;click apply
+  gosub clickOffset 520 680
+  return
+;=====================================
+sub setBodType
+  ;%1 type_material
+  ;returns X_Y coords
+  ;===================================
+  set %ingotsLine1 iron_dull_shadow_copper_bronze
+  set %ingotsLine2 golden_agapite_verite_valorite
+  set %boardsLine1 wood_oak_ash_yew
+  set %boardsLine2 blood_heart_frost
+  set %materialType %1
+  gosub divideString %materialType left
+  set %type #RESULT
+  gosub divideString %materialType right
+  set %material #RESULT
+  if blacksmith in %type || tinker in %type
+  {
+    if blacksmith in %type && %material in %ingotsLine1
+    {
+      set %y 170
+      gosub getMaterialCoords %material
+      return #RESULT , _ , %y
+    }
+    if blacksmith in %type && %material in %ingotsLine2
+    {
+      set %y 210
+      gosub getMaterialCoords %material
+      return #RESULT , _ , %y
+    }
+    if tinker in %type && %material in %ingotsLine1
+    {
+      set %y 300
+      gosub getMaterialCoords %material
+      return #RESULT , _ , %y
+    }
+    if tinker in %type && %material in %ingotsLine2
+    {
+      set %y 340
+      gosub getMaterialCoords %material
+      return #RESULT , _ , %y
+    }
+  }
+  if tailor in %type
+  {
+     set %y 245
+     gosub getMaterialCoords %material
+     return #RESULT , _ , %y
+  }
+  if carp in %type || fletch in %type
+  {
+     if %carp in %type && %material in %boardsLine1
+     {
+       set %y 390
+       gosub getMaterialCoords %material
+       return #RESULT , _ , %y
+     }
+     if %carp in %type && %material in %boardsLine2
+     {
+       set %y 430
+       gosub getMaterialCoords %material
+       return #RESULT , _ , %y
+     }
+     if fletch in %type && %material in %boardsLine1
+     {
+       set %y 455
+       gosub getMaterialCoords %material
+       return #RESULT , _ , %y
+     }
+     if fletch in %type && %material in %boardsLine2
+     {
+       set %y 490
+       gosub getMaterialCoords %material
+       return #RESULT , _ , %y
+     }
+  }
+  if alchemy in %type || inscription in %type || cooking in %type
+  {
+   set %x 40
+   if alchemy in %type
+     return %x , _ , 525
+   if inscription in %type
+     return %x , _ , 555
+   if cooking in %type
+     return %x , _ , 585
+  }
+;=====================================
+sub divideString
+  ;assumes a string divided by an underscore
+  ;%1 string
+  ;%2 side to return left/right
+  ;===================================
+  set %string %1
+  str POS %string _
+  set %dividingPosition #STRRES
+  set %divide %dividingPosition - 1
+  if %2 = left
+  {
+    str Left %string %divide
+    return #STRRES
+  }
+  if %2 = right
+  {
+    str Right %string %divide
+    return #STRRES
+  }
+;=====================================
+sub getMaterialCoords
+  ;%1 material
+  ;===================================
+  set %material %1
+  if %material = iron || %material = cloth || %material = wood || %material = blood
+    return 160
+  if %material = dull || %material = agapite || %material = leather || %material = oak
+    return 245
+  if %material = shadow || %material = verite || %material = spined || %material = ash
+    return 345
+  if %material = copper || %material = valorite || %material = horned || %material = yew || %material = frost
+    return 425
+  if %material = bronze || %material = barbed
+    return 525
+  if %material = golden
+    return 160
+  if %material = heart
+    return 295
+;=====================================
+sub startMenu
+;=====================================
+START_MENU_LOOP:
+  gosub displayMenu
+  while #MENUBUTTON <> startButton
+    wait %shortwait
+  set #MENUBUTTON N/A
+  menu get bodType
+  wait %shortwait
+  if #MENURES = 0 2
+    display Please select the bod type
+    goto START_MENU_LOOP
+  return
+;=====================================
+sub menuManager
+  ;===================================
+  menu get bodType
+  wait %shortwait
+  if #MENURES = 1;Blacksmith
+  {
+    set %bookCount %smithyBookCount
+    set %sortBook %smithyUnsortedBook
+    set %bookType 1
+    return
+  }
+  if #MENURES = 2 ;Tailor
+  {
+    set %bookCount %tailorBookCount
+    set %sortBook %tailorUnsortedBook
+    set %bookType 2
+    return
+  }
+  if #MENURES = 3 ;Tinker
+  {
+     set %bookCount %tinkerBookCount
+     set %sortBook %tinkerUnsortedBook
+     set %bookType 3
+     return
+  }
+  if #MENURES = 4 ;Carp
+  {
+     set %bookCount %carpBookCount
+     set %sortBook %carpUnsortedBook
+     set %bookType 4
+     return
+  }
+  if #MENURES = 5 ;Fletch
+  {
+     set %bookCount %fletchBookCount
+     set %sortBook %fletchUnsortedBook
+     set %bookType 5
+     return
+  }
+  if #MENURES = 6 ; Alchemy
+  {
+     set %bookCount %alchemyBookCount
+     set %sortBook %alchemyUnsortedBook
+     set %bookType 6
+     return
+  }
+  if #MENURES = 7 ;inscription
+  {
+     set %bookCount %inscriptionBookCount
+     set %sortBook %scribeUnsortedBook
+     set %bookType 7
+     return
+  }
+  if #MENURES = 8 ;cooking
+  {
+     set %bookCount %cookingBookCount
+     set %sortBook %cookingUnsortedBook
+     set %bookType 8
+     return
+  }
+;=====================================
+sub setVariables
+  ;===================================
+  ; bod colors used to detect bod type
+  set %tinkerBodColor 1109
+  set %tailorBodColor 1155
+  set %smithyBodColor 1102
+  set %scribeBodColor 2598
+  set %carpBodColor 1512
+  set %fletchBodColor 1421
+  set %alchBodColor 2505
+  set %cookingBodColor 1169
+  set %shortwait 10
+  set %longwait 20
+  set %bodType EYM
+  set %bodBookType DYM
+  set %bodBookSize 620_459
+  set %bodBookFilterSize 620_715
+  set %bodBookGump generic_gump
+  ;====================================
+  ; the bod book names for Blacksmithing
+  set %smithyBookCount 11
+  set %smithyBook1 AgapiteRunic
+  set %smithyBook2 VeriteRunic
+  set %smithyBook3 ValoriteRunic
+  set %smithyBook4 GoldRunic
+  set %smithyBook5 BronzeRunic
+  set %smithyBook6 ShadowRunic
+  set %smithyBook7 120SmithScroll
+  set %smithyBook8 30ASH
+  set %smithyBook9 15ASH
+  set %smithyBook10 10ASH
+  set %smithyBook11 SmithyTrash
+  ;====================================
+  ; the bod book names for Tinkering
+  
+  set %tinkerBookCount 17
+  set %tinkerBook1 Craftsman10
+  set %tinkerBook2 SmeltersGolden
+  set %tinkerBook3 MinersGolden
+  set %tinkerBook4 Craftsman25
+  set %tinkerBook5 SmeltersAgapite
+  set %tinkerBook6 MinersAgapite
+  set %tinkerBook7 PowderKeg
+  set %tinkerBook8 AutomatonActivator
+  set %tinkerBook9 SmeltersVerite
+  set %tinkerBook10 MinersVerite
+  set %tinkerBook11 Craftsman50
+  set %tinkerBook12 RockHammer
+  set %tinkerBook13 BlackrockMoonstone
+  set %tinkerBook14 SmeltersValorite
+  set %tinkerBook15 MinersValorite
+  set %tinkerBook16 BlackrockAutomaton
+  set %tinkerBook17 TinkerTrash
+  set %TinkerUnsortedBook UnsortedTinkerBods
+  return
+;--------- EasyUO Menu Designer Code Begin ---------
+sub displayMenu
+	menu Clear
+	menu Window Title Penny's Bod Sorter
+	menu Window Color 3DDkShadow
+	menu Window Size 251 84
+	menu Font Transparent #true
+	menu Font Align Right
+	menu Font Name MS Sans Serif
+	menu Font Size 8
+	menu Font Style b
+	menu Font Color WindowText
+	menu Font Transparent #false
+	menu Font Align Left
+	menu Font BGColor 3DDkShadow
+	menu Text EUOLabel1 16 16 Bod Type
+	menu Font BGColor Teal
+	menu Button startButton 84 48 75 25 Start
+	menu Font Style
+	menu Font BGColor Window
+	menu Combo Create bodType 80 12 145
+	menu Combo Add bodType Blacksmith
+	menu Combo Add bodType Tailor
+	menu Combo Add bodType Tinker
+	menu Combo Add bodType Carpentry
+	menu Combo Add bodType Fletching
+	menu Combo Add bodType Alchemy
+	menu Combo Add bodType Inscription
+	menu Combo Add bodType Cooking
+	menu Show 421 270
+return
+;--------- EasyUO Menu Designer Code End ---------
